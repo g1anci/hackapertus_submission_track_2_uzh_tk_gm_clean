@@ -1,0 +1,5 @@
+.env
+.venv
+executed/
+RSD_Validation_Pipeline_results/
+.ipynb_checkpoints

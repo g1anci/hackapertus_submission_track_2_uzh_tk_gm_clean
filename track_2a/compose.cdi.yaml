@@ -1,0 +1,9 @@
+services:
+  synthetic:
+    deploy: !reset null
+    devices:
+      - nvidia.com/gpu=all
+  train:
+    deploy: !reset null
+    devices:
+      - nvidia.com/gpu=all

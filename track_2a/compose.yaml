@@ -1,0 +1,42 @@
+x-gpu: &gpu
+  deploy:
+    resources:
+      reservations:
+        devices: [{ driver: nvidia, count: all, capabilities: [gpu] }]
+  profiles: [ gpu ]
+  build: src/gpu_env
+  image: track_2a-gpu
+
+services:
+  eval:
+    build: src/evaluation
+    volumes: [./src/evaluation:/work, hf-cache:/cache/huggingface]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      LLM_BASE_URL: ${LLM_BASE_URL:?set LLM_BASE_URL, see .env.example}
+      LLM_API_KEY: ${LLM_API_KEY:?set LLM_API_KEY}
+      LLM_NAME: ${LLM_NAME:?set LLM_NAME}
+      HF_TOKEN: ${HF_TOKEN:-}
+      SPLIT: ${SPLIT:-validation}
+
+  synthetic:
+    <<: *gpu
+    volumes: [ ./src/synthetic_data:/work, hf-cache:/cache/huggingface ]
+    environment: { HF_TOKEN: "${HF_TOKEN:-}" }
+    command: [ "bash", "run.sh" ]
+
+  train:
+    <<: *gpu
+    shm_size: 8gb
+    volumes:
+      - ./src/train:/work
+      - ./src/synthetic_data/synthetic:/synthetic:ro
+      - hf-cache:/cache/huggingface
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      PILOT: ${PILOT:-on}
+      TQDM_MININTERVAL: "30"
+      TQDM_MAXINTERVAL: "30"
+    command: [ "sh", "-c", "mkdir -p executed && papermill --log-output synthetic_train_run_quantized.ipynb executed/synthetic_train_run_quantized.ipynb" ]
+
+volumes: { hf-cache: {} }
